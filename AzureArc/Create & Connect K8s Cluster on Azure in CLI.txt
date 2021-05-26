@@ -1,0 +1,93 @@
+Create and Connect to Azure Kubernetes cluster on Azure (CLI): - May2021
+
+https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough
+
+the rest of the scripts - from simple kubectl commands
+===============================================
+#1. Create AKS cluster on Azure 
+#Create a new resource group first if not yet or needed
+
+az group create --name myaksgroup --location eastus
+
+# Enable monitoring:
+
+az provider show -n Microsoft.OperationsManagement -o table
+az provider show -n Microsoft.OperationalInsights -o table
+
+#register monitoring providers: 
+
+az provider register --namespace Microsoft.OperationsManagement
+az provider register --namespace Microsoft.OperationalInsights
+
+##Create AKS cluster:
+
+az aks create --resource-group myaksgroup --name myk8scluster001 --node-count 1 --enable-addons monitoring --generate-ssh-keys
+
+#*** (Not tested!) The SSH key will be saved in local Azure Shell storage under /home/user, if need a backup, may need look into azcopy of other commands. 
+
+#install CLI to the cluster:  
+
+az aks install-cli
+
+--------------------------------------------
+#2. Connect to myk8scluster001
+#Connect to your cluster using command line tooling to interact directly with cluster using kubectl, the command line tool for Kubernetes. Kubectl is available within the Azure Cloud Shell by default and can also be installed locally. 
+
+#Open Cloud Shell or the Azure CLI
+
+az account set --subscription c9408de5-5684-4eb3-84c7-c33cda73ab5c
+
+az aks get-credentials --resource-group Public-demos --name myk8scluster001
+------------------------------------
+
+#3. Run Kubernetes command
+# Once you have run the command above to connect to the cluster, you can run any kubectl commands. Here are a few examples of useful commands you can try.
+
+# List all deployments in all namespaces
+kubectl get deployments --all-namespaces=true
+
+# List all deployments in a specific namespace
+# Format :kubectl get deployments --namespace <namespace-name>
+kubectl get deployments --namespace kube-system
+
+#Sample response: 
+
+NAMESPACE     NAME                 READY   UP-TO-DATE   AVAILABLE   AGE
+kube-system   coredns              2/2     2            2           23m
+kube-system   coredns-autoscaler   1/1     1            1           23m
+kube-system   metrics-server       1/1     1            1           23m
+kube-system   omsagent-rs          1/1     1            1           23m
+kube-system   tunnelfront          1/1     1            1           23m
+
+
+# List details about a specific deployment
+# Format :kubectl describe deployment <deployment-name> --namespace <namespace-name>
+kubectl describe deployment my-dep --namespace kube-system
+
+# list pods:
+
+kubectl get pods --namespace kube-system
+
+#Sample response: 
+NAME                                  READY   STATUS    RESTARTS   AGE
+azure-ip-masq-agent-r8rxh             1/1     Running   0          27m
+coredns-76c97c8599-95v7k              1/1     Running   0          29m
+coredns-76c97c8599-mb4tn              1/1     Running   0          27m
+coredns-autoscaler-599949fd86-8cqcd   1/1     Running   0          29m
+kube-proxy-ll7h5                      1/1     Running   0          27m
+metrics-server-77c8679d7d-zqsq6       1/1     Running   1          29m
+omsagent-qmxg5                        1/1     Running   0          27m
+omsagent-rs-758c55858c-gmzdh          1/1     Running   0          29m
+tunnelfront-54ccc5f69b-qh62t          1/1     Running   0          29m
+
+
+# List pods using a specific label
+# Format :kubectl get pods -l <label-key>=<label-value> --all-namespaces=true
+kubectl get pods -l app=nginx --all-namespaces=true
+
+# Get logs for all pods with a specific label
+# Format :kubecl logs -l <label-key>=<label-value>
+
+kubectl logs -l app=nginx --namespace kube-system
+
+
