@@ -1,0 +1,35 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+#  script: echo Hello, world!
+- task: AzureResourceManagerTemplateDeployment@3
+  inputs:
+    deploymentScope: 'Resource Group'
+    azureResourceManagerConnection: 'Subscription-GBS-RHE-POC-100m-EA-DEV-Test-RI'
+    subscriptionId: 'c9408de5-5684-4eb3-84c7-c33cda73ab5c'
+    action: 'Create Or Update Resource Group'
+    resourceGroupName: 'cicdtest'
+    location: 'East US'
+    templateLocation: 'Linked artifact'
+    csmFile: './basics/create_storage_account.json'
+    csmParametersFile: './Basics/create_storage_acct_parameters.json'
+    deploymentMode: 'Validation only'
+    deploymentName: 'deploy_storage'
+    deploymentOutputs: '$var=ConvertFrom-Json ''$(storageAccountName)'' $value=$var.storageAccountName.value Write-Host "##vso[task.setvariable variable=storageAccount;]$value"'
+#  displayName: 'Run a one-line script'
+- script: |
+    echo This script will deploy a new storage account to a new resource group
+#    echo Add other tasks to build, test, and deploy your project.
+#    echo See https://aka.ms/yaml
+#  displayName: 'Run a multi-line script'
+#  displayName: 'Deploy a new storage account'
