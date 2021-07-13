@@ -1,0 +1,145 @@
+Demo Scripts for DA Presentation - July 8, 2021
+
+Demo#I. AKS Cluster and Azure Arc, (Need Add container deployment)
+Demo#II (optional): AzureArc configuration GitOps
+Demo#III. ARO - only after the provisioning - can deploy the same container package (Remember to check DNS settings)
+https://docs.microsoft.com/en-us/azure/virtual-machines/custom-domain
+=========================================================
+Demo I. AKS Cluster +Azure Arc
+=====================================
+
+#1. Create AKS cluster on Azure 
+//list existing resource-group feature: 
+
+//az account list
+az account set --subscription c9408de5-5684-4eb3-84c7-c33cda73ab5c
+az group show --resource-group public-demos
+
+//Or: create a new RG: 
+az group create --name myaksgroup --location eastus
+az group list
+
+# Enable monitoring
+az provider show -n Microsoft.OperationsManagement -o table
+az provider show -n Microsoft.OperationalInsights -o table
+
+#register monitoring providers: 
+
+az provider register --namespace Microsoft.OperationsManagement
+az provider register --namespace Microsoft.OperationalInsights
+
+##Create AKS cluster:
+
+
+az aks create --resource-group myaksgroup --name myk8scluster001 --node-count 3 --enable-addons monitoring --generate-ssh-keys
+
+//cd .ssh to see the keys.
+//to see the cluster created: 
+az aks list 
+
+#install CLI to the cluster:  
+az aks install-cli
+
+//(ignore if current directory already added in PATH). Add Path:
+
+//set PATH=%PATH%;%USERPROFILE%
+//echo PATH
+--------------------------------------------
+#2. Connect to myk8scluster001
+#Connect to your cluster using command line tooling to interact directly with cluster using kubectl. Kubectl is available within the Azure Cloud Shell by default and can also be installed locally. 
+
+#Open Cloud Shell or the Azure CLI
+
+//az account set --subscription c9408de5-5684-4eb3-84c7-c33cda73ab5c
+
+az aks get-credentials --resource-group myaksgroup --name myk8scluster001
+------------------------------------
+
+#3. Run Kubernetes command
+# Once you have run the command above to connect to the cluster, you can run any kubectl commands. Here are a few examples of useful commands you can try.
+
+//go to /.azure-lubectl directory as needed: 
+cd .azure-kubectl
+# List all deployments in all namespaces
+kubectl get deployments --all-namespaces=true
+
+# List all deployments in a specific namespace
+# Format :kubectl get deployments --namespace <namespace-name>
+kubectl get deployments --namespace kube-system
+
+-----------------------------------------------
+//App deployment - need test an app: 
+
+# List details about a specific deployment
+# Format :kubectl describe deployment <deployment-name> --namespace <namespace-name>
+kubectl describe deployment my-dep --namespace kube-system
+
+# list pods:
+
+kubectl get pods --namespace kube-system
+
+
+# List pods using a specific label
+# Format :kubectl get pods -l <label-key>=<label-value> --all-namespaces=true
+kubectl get pods -l app=nginx --all-namespaces=true
+
+# Get logs for all pods with a specific label
+# Format :kubecl logs -l <label-key>=<label-value>
+
+kubectl logs -l app=nginx --namespace kube-system
+-------------------------------------
+#4: Connect to Azure Arc
+
+//enable AzureArc extension for K8s cluster and configuration:
+
+az extension add --name connectedk8s
+az extension add --name k8s-configuration
+az version
+
+//install Helm - check:
+helm version
+
+//register providers for AzureArc enabled Kubernetes namespaces:
+
+az provider register --namespace Microsoft.Kubernetes
+az provider register --namespace Microsoft.KubernetesConfiguration
+az provider register --namespace Microsoft.ExtendedLocation
+
+#Monitor the registration process - may take 10min:
+
+az provider show -n Microsoft.Kubernetes -o table
+az provider show -n Microsoft.KubernetesConfiguration -o table
+az provider show -n Microsoft.ExtendedLocation -o table
+
+2. Connect and verify existing K8s clusters: (this may take a few min)
+
+az connectedk8s connect --name myakscluster001 --resource-group myaksgroup
+az connectedk8s list --resource-group  myaksgroup --output table
+
+//check AzureArc agent running on pods: 
+
+kubectl get deployments,pods -n azure-arc
+
+3 Check portal: Kubernetes-Azure Arc
+
+//from K8s cluster, see metrics
+
+
+4. Clean up resources: 
+
+az connectedk8s delete --name myk8scluster001--resource-group myaksgroup
+az group delete --resource-group myaksgroup
+
+//go portal to verify
+
+====================================
+Demo#II (optional): AzureArc configuration GitOps
+==================================================
+
+
+
+
+
+=======================================================
+Demo#III: ARO
+======================================================
