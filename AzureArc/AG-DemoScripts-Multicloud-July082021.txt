@@ -19,7 +19,7 @@ az group show --resource-group public-demos
 az group create --name myaksgroup --location eastus
 az group list
 
-# Enable monitoring
+# Enable monitoring (optional)
 az provider show -n Microsoft.OperationsManagement -o table
 az provider show -n Microsoft.OperationalInsights -o table
 
@@ -58,7 +58,7 @@ az aks get-credentials --resource-group myaksgroup --name myk8scluster001
 #3. Run Kubernetes command
 # Once you have run the command above to connect to the cluster, you can run any kubectl commands. Here are a few examples of useful commands you can try.
 
-//go to /.azure-lubectl directory as needed: 
+//go to /.azure-kubectl directory as needed: 
 cd .azure-kubectl
 # List all deployments in all namespaces
 kubectl get deployments --all-namespaces=true

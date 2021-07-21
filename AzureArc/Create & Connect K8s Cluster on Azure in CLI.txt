@@ -1,9 +1,17 @@
-Create and Connect to Azure Kubernetes cluster on Azure (CLI): - May2021
+Create and Connect to Azure Kubernetes cluster in Azure Arc (CLI): - K8s done in May2021- Azure Arc updated in July 1-2021 - Verified all running on cluster, except app deployment!
 
+====================================================================================================
 https://docs.microsoft.com/en-us/azure/aks/kubernetes-walkthrough
+
+https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/quickstart-connect-cluster
+
+https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/conceptual-configurations
+
 
 the rest of the scripts - from simple kubectl commands
 ===============================================
+I: Create Kubernetes cluster on Azure
+=================================================
 #1. Create AKS cluster on Azure 
 #Create a new resource group first if not yet or needed
 
@@ -31,13 +39,13 @@ az aks install-cli
 
 --------------------------------------------
 #2. Connect to myk8scluster001
-#Connect to your cluster using command line tooling to interact directly with cluster using kubectl, the command line tool for Kubernetes. Kubectl is available within the Azure Cloud Shell by default and can also be installed locally. 
+#Connect to your cluster using command line tooling to interact directly with cluster using kubectl. Kubectl is available within the Azure Cloud Shell by default and can also be installed locally. 
 
 #Open Cloud Shell or the Azure CLI
 
 az account set --subscription c9408de5-5684-4eb3-84c7-c33cda73ab5c
 
-az aks get-credentials --resource-group Public-demos --name myk8scluster001
+az aks get-credentials --resource-group myaksgroup --name myk8scluster001
 ------------------------------------
 
 #3. Run Kubernetes command
@@ -59,6 +67,8 @@ kube-system   metrics-server       1/1     1            1           23m
 kube-system   omsagent-rs          1/1     1            1           23m
 kube-system   tunnelfront          1/1     1            1           23m
 
+---------------------------------------
+//App deployment - to be tested!!!
 
 # List details about a specific deployment
 # Format :kubectl describe deployment <deployment-name> --namespace <namespace-name>
@@ -89,5 +99,103 @@ kubectl get pods -l app=nginx --all-namespaces=true
 # Format :kubecl logs -l <label-key>=<label-value>
 
 kubectl logs -l app=nginx --namespace kube-system
+
+===================================================
+II: Connect K8s cluster in Azure Arc:
+
+https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/quickstart-connect-cluster
+https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/quickstart-connect-cluster#install-cli-extensions
+====================================================
+//Azure Arc using TCP port 443 for outbound. Make sure port 
+
+//Note: if connectk8s extension not already install, from Cloud Shell on Azure Portal:
+az extension add --name connectedk8s 
+az extension add --name k8s-configuration
+az version
+
+//If already exists, will get message "Extension 'connectedk8s' is already installed."
+
+//Make sure install Helm - download & install. Check
+helm version
+
+1. register providers for AzureArc enabled Kubernetes namespaces:
+
+az provider register --namespace Microsoft.Kubernetes
+az provider register --namespace Microsoft.KubernetesConfiguration
+az provider register --namespace Microsoft.ExtendedLocation
+
+#Monitor the registration process - may take 10min:
+
+az provider show -n Microsoft.Kubernetes -o table
+az provider show -n Microsoft.KubernetesConfiguration -o table
+az provider show -n Microsoft.ExtendedLocation -o table
+
+2. Connect existing K8s clusters: 
+# Locate the resource group of the existing K8s cluster: (this may take a few min)
+
+az connectedk8s connect --name myakscluster001 --resource-group myaksgroup
+
+#***verify cluster connection: (or check portal)
+az connectedk8s list --resource-group  myaksgroup --output table
+
+4.(optional) Connect using an outbound proxy: 
+
+#Set environment variable: 
+#sample bash: 
+export HTTP_PROXY=<proxy-server-ip-address>:<port>
+export HTTPS_PROXY=<proxy-server-ip-address>:<port>
+export NO_PROXY=<cluster-apiserver-ip-address>:<port>
+
+#CLI: 
+set HTTP_PROXY=<proxy-server-ip-address>:<port>
+set HTTPS_PROXY=<proxy-server-ip-address>:<port>
+set NO_PROXY=<cluster-apiserver-ip-address>:<port>
+
+#Run connectedk8s with proxy parameters:
+
+az connectedk8s connect --name <cluster-name> --resource-group <resource-group> --proxy-https https://<proxy-server-ip-address>:<port> --proxy-http http://<proxy-server-ip-address>:<port> --proxy-skip-range <excludedIP>,<excludedCIDR> --proxy-cert <path-to-cert-file>
+
+5. View Azure Arc agents for K8s clusters running on pods: 
+
+# Verify deployments for pods: 
+
+kubectl get deployments,pods -n azure-arc
+
+//Outputs: 
+
+
+ NAME                                        READY      UP-TO-DATE  AVAILABLE  AGE
+ deployment.apps/cluster-metadata-operator     1/1             1        1      16h
+ deployment.apps/clusteridentityoperator       1/1             1        1      16h
+ deployment.apps/config-agent                  1/1             1        1      16h
+ deployment.apps/controller-manager            1/1             1        1      16h
+ deployment.apps/flux-logs-agent               1/1             1        1      16h
+ deployment.apps/metrics-agent                 1/1             1        1      16h
+ deployment.apps/resource-sync-agent           1/1             1        1      16h
+
+ NAME                                           READY    STATUS   RESTART AGE
+ pod/cluster-metadata-operator-7fb54d9986-g785b  2/2     Running  0       16h
+ pod/clusteridentityoperator-6d6678ffd4-tx8hr    3/3     Running  0       16h
+ pod/config-agent-544c4669f9-4th92               3/3     Running  0       16h
+ pod/controller-manager-fddf5c766-ftd96          3/3     Running  0       16h
+ pod/flux-logs-agent-7c489f57f4-mwqqv            2/2     Running  0       16h
+ pod/metrics-agent-58b765c8db-n5l7k              2/2     Running  0       16h
+ pod/resource-sync-agent-5cf85976c7-522p5        3/3     Running  0       16h
+ 
+6. Clean up resources: -delete all Azure Arc related configuration resources (may not recommend using portal)
+
+az connectedk8s delete --name AzureArcTest1 --resource-group AzureArcTest
+
+az group delete --resource-group myaksgroup
+
+//go portal to verify
+
+
+
+
+
+
+
+
 
 
